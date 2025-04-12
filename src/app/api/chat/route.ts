@@ -6,7 +6,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY || '');
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { messages, model } = await req.json();
     
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -16,7 +16,8 @@ export async function POST(req: Request) {
     }
 
     // Get the generative model
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const modelName = model || 'gemini-2.0-flash';
+    const genModel = genAI.getGenerativeModel({ model: modelName });
 
     // Create a streaming response
     const encoder = new TextEncoder();
@@ -53,7 +54,7 @@ Always specify the programming language after the opening backticks to enable pr
           };
           
           // Generate content with streaming using the full conversation history
-          const result = await model.generateContentStream({
+          const result = await genModel.generateContentStream({
             contents: [systemMessage, ...formattedMessages]
           });
           
@@ -90,4 +91,4 @@ Always specify the programming language after the opening backticks to enable pr
       { status: 500 }
     );
   }
-} 
+}

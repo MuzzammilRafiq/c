@@ -50,10 +50,10 @@ export default function Sidebar({
           return (
             <div
               key={conversation.id}
-              className={`p-4 rounded-lg transition-all hover:scale-102 ${activeConversationId === conversation.id
+              className={`relative p-4 rounded-lg transition-all hover:scale-102 ${activeConversationId === conversation.id
                 ? 'bg-blue-600 text-white shadow-lg'
                 : 'bg-gray-700 text-gray-100 hover:bg-gray-600'
-                }`}
+                } group`}
             >
               <div
                 className="cursor-pointer space-y-1"
@@ -69,7 +69,7 @@ export default function Sidebar({
                   e.stopPropagation();
                   onDeleteConversation(conversation.id);
                 }}
-                className="mt-2 p-1.5 text-gray-300 hover:text-red-400 hover:bg-gray-600/50 rounded-full transition-colors"
+                className="absolute top-2 right-2 p-1.5 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-400 hover:bg-gray-600/50 rounded-full transition-all"
                 aria-label="Delete conversation"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

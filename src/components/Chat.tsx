@@ -9,6 +9,8 @@ import Sidebar from './Sidebar';
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from 'next/navigation';
 
+type GeminiModel = 'gemini-2.0-flash' | 'gemini-1.0-pro' | 'gemini-1.0-pro-latest';
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -35,17 +37,18 @@ export default function Chat({ conversationId }: ChatProps) {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash');
 
   // Load conversations from localStorage on initial render
   useEffect(() => {
     if (isInitialized) return;
-    
+
     try {
       const savedConversations = localStorage.getItem('conversations');
       if (savedConversations) {
         const parsed = JSON.parse(savedConversations);
         setConversations(parsed);
-        
+
         if (conversationId) {
           const conversation = parsed.find((c: Conversation) => c.id === conversationId);
           if (conversation) {
@@ -105,11 +108,11 @@ export default function Chat({ conversationId }: ChatProps) {
       prev.map((conv) =>
         conv.id === activeConversationId
           ? {
-              ...conv,
-              messages: updatedMessages,
-              lastMessage: updatedMessages[updatedMessages.length - 1]?.content || '',
-              timestamp: Date.now(),
-            }
+            ...conv,
+            messages: updatedMessages,
+            lastMessage: updatedMessages[updatedMessages.length - 1]?.content || '',
+            timestamp: Date.now(),
+          }
           : conv
       )
     );
@@ -164,8 +167,9 @@ export default function Chat({ conversationId }: ChatProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          messages: updatedMessages
+        body: JSON.stringify({
+          messages: updatedMessages,
+          model: selectedModel
         }),
       });
 
@@ -181,17 +185,17 @@ export default function Chat({ conversationId }: ChatProps) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          
+
           const chunk = decoder.decode(value);
           const lines = chunk.split('\n');
-          
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6);
               if (data === '[DONE]') {
                 break;
               }
-              
+
               try {
                 const parsed = JSON.parse(data);
                 if (parsed.text) {
@@ -228,13 +232,13 @@ export default function Chat({ conversationId }: ChatProps) {
     const match = /language-(\w+)/.exec(className || '');
     const language = match ? match[1] : 'text';
     const [copied, setCopied] = useState(false);
-    
+
     const copyToClipboard = () => {
       navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     };
-    
+
     return !inline && match ? (
       <div className="relative group">
         <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -312,19 +316,29 @@ export default function Chat({ conversationId }: ChatProps) {
         onDeleteConversation={deleteConversation}
       />
       <div className="flex-1 flex flex-col max-w-5xl mx-auto p-4">
+        <div className="mb-4 flex justify-end">
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value as GeminiModel)}
+            className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+            <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
+            <option value="gemini-1.0-pro-latest">Gemini 1.0 Pro Latest</option>
+          </select>
+        </div>
         <div className="flex-1 overflow-y-auto mb-4 space-y-4">
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`p-4 rounded-lg ${
-                message.role === 'user'
-                  ? 'bg-blue-100 ml-auto'
-                  : 'bg-gray-100'
-              } max-w-[90%]`}
+              className={`p-4 rounded-lg ${message.role === 'user'
+                ? 'bg-blue-100 ml-auto'
+                : 'bg-gray-100'
+                } max-w-[90%]`}
             >
               {message.role === 'assistant' ? (
                 <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <ReactMarkdown 
+                  <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={MarkdownComponents}
                   >
@@ -367,4 +381,4 @@ export default function Chat({ conversationId }: ChatProps) {
       </div>
     </div>
   );
-} 
+}
