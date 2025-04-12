@@ -6,7 +6,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY || '');
 
 export async function POST(req: Request) {
   try {
-    const { messages, model } = await req.json();
+    const { messages, model, systemPrompt } = await req.json();
     
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -30,27 +30,10 @@ export async function POST(req: Request) {
             parts: [{ text: msg.content }]
           }));
           
-          // Add a system message to instruct the model to use Markdown with proper code formatting
+          // Add a system message with the custom prompt or default formatting instructions
           const systemMessage = {
             role: 'user',
-            parts: [{ text: `Please format your responses using Markdown syntax. Use headings, lists, and other Markdown features to make your responses more readable and structured.
-
-When including code examples, always use proper code blocks with language specification like this:
-
-\`\`\`javascript
-// JavaScript code example
-const greeting = "Hello, world!";
-console.log(greeting);
-\`\`\`
-
-\`\`\`python
-# Python code example
-def greet(name):
-    return f"Hello, {name}!"
-print(greet("World"))
-\`\`\`
-
-Always specify the programming language after the opening backticks to enable proper syntax highlighting.` }]
+            parts: [{ text: systemPrompt }]
           };
           
           // Generate content with streaming using the full conversation history

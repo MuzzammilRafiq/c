@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Sidebar from './Sidebar';
+import SystemPromptModal from './SystemPromptModal';
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from 'next/navigation';
 import { MarkdownComponents } from '~/helpers/markdown-components';
@@ -36,6 +37,25 @@ export default function Chat({ conversationId }: ChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash');
+  const [systemPrompt, setSystemPrompt] = useState<string>(`Please format your responses using Markdown syntax. Use headings, lists, and other Markdown features to make your responses more readable and structured.
+
+When including code examples, always use proper code blocks with language specification like this:
+
+\`\`\`javascript
+// JavaScript code example
+const greeting = "Hello, world!";
+console.log(greeting);
+\`\`\`
+
+\`\`\`python
+# Python code example
+def greet(name):
+    return f"Hello, {name}!"
+print(greet("World"))
+\`\`\`
+
+Always specify the programming language after the opening backticks to enable proper syntax highlighting.`);
+  const [isSystemPromptModalOpen, setIsSystemPromptModalOpen] = useState(false);
 
   // Load conversations from localStorage on initial render
   useEffect(() => {
@@ -163,7 +183,8 @@ export default function Chat({ conversationId }: ChatProps) {
         },
         body: JSON.stringify({
           messages: updatedMessages,
-          model: selectedModel
+          model: selectedModel,
+          systemPrompt: systemPrompt
         }),
       });
 
@@ -237,7 +258,13 @@ export default function Chat({ conversationId }: ChatProps) {
         onDeleteConversation={deleteConversation}
       />
       <div className="flex-1 flex flex-col max-w-5xl mx-auto p-4">
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex justify-end gap-2">
+          <button
+            onClick={() => setIsSystemPromptModalOpen(true)}
+            className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+          >
+            System Prompt
+          </button>
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value as GeminiModel)}
@@ -300,6 +327,12 @@ export default function Chat({ conversationId }: ChatProps) {
           </button>
         </form>
       </div>
+      <SystemPromptModal
+        isOpen={isSystemPromptModalOpen}
+        onClose={() => setIsSystemPromptModalOpen(false)}
+        systemPrompt={systemPrompt}
+        onSystemPromptChange={setSystemPrompt}
+      />
     </div>
   );
 }
