@@ -1,17 +1,28 @@
-'use client';
-import { useState, useRef, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import Sidebar from './Sidebar';
-import SystemPromptModal from './SystemPromptModal';
-import { v4 as uuidv4 } from 'uuid';
-import { useRouter } from 'next/navigation';
-import { MarkdownComponents } from '~/helpers/markdown-components';
+"use client";
+import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import Sidebar from "./Sidebar";
+import SystemPromptModal from "./SystemPromptModal";
+import { v4 as uuidv4 } from "uuid";
+import { useRouter } from "next/navigation";
+import { MarkdownComponents } from "~/helpers/markdown-components";
 
-type GeminiModel = 'gemini-2.0-flash';
-
+const GeminiModels = {
+  "Gemini 2.0 Flash Lite": "gemini-2.0-flash-lite",
+  "Gemini 1.5 Pro": "gemini-1.5-pro-latest",
+  "Gemini 1.5 Flash": "gemini-1.5-flash-latest",
+  "Gemini 1.5 Flash 8B": "gemini-1.5-flash-8b-latest",
+  "Gemini 2.0 Flash": "gemini-2.0-flash",
+  "Gemini 2.0 Pro Exp": "gemini-2.0-pro-exp",
+  "Gemma 3 1B": "gemma-3-1b-it",
+  "Gemma 3 4B": "gemma-3-4b-it",
+  "Gemma 3 12B": "gemma-3-12b-it",
+  "Gemma 3 27B": "gemma-3-27b-it",
+};
+type GeminiModel = keyof typeof GeminiModels;
 interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -27,34 +38,35 @@ interface ChatProps {
   conversationId?: string;
 }
 
-export default function Chat({ conversationId }: ChatProps) {
-  const router = useRouter();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationId || null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>('gemini-2.0-flash');
-  const [systemPrompt, setSystemPrompt] = useState<string>(`Please format your responses using Markdown syntax. Use headings, lists, and other Markdown features to make your responses more readable and structured.
-
-When including code examples, always use proper code blocks with language specification like this:
-
+const defaultSystemPrompt = `Please format your responses using Markdown syntax. Use headings, lists, and other Markdown features to make your responses more readable and structured.When including code examples, always use proper code blocks with language specification like this:
 \`\`\`javascript
 // JavaScript code example
 const greeting = "Hello, world!";
 console.log(greeting);
 \`\`\`
-
 \`\`\`python
 # Python code example
 def greet(name):
     return f"Hello, {name}!"
 print(greet("World"))
 \`\`\`
+Always specify the programming language after the opening backticks to enable proper syntax highlighting.`;
 
-Always specify the programming language after the opening backticks to enable proper syntax highlighting.`);
+export default function Chat({ conversationId }: ChatProps) {
+  const router = useRouter();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(conversationId || null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>(
+    "Gemini 2.0 Flash Lite"
+  );
+  const [systemPrompt, setSystemPrompt] = useState<string>(defaultSystemPrompt);
   const [isSystemPromptModalOpen, setIsSystemPromptModalOpen] = useState(false);
 
   // Load conversations from localStorage on initial render
@@ -62,13 +74,15 @@ Always specify the programming language after the opening backticks to enable pr
     if (isInitialized) return;
 
     try {
-      const savedConversations = localStorage.getItem('conversations');
+      const savedConversations = localStorage.getItem("conversations");
       if (savedConversations) {
         const parsed = JSON.parse(savedConversations);
         setConversations(parsed);
 
         if (conversationId) {
-          const conversation = parsed.find((c: Conversation) => c.id === conversationId);
+          const conversation = parsed.find(
+            (c: Conversation) => c.id === conversationId
+          );
           if (conversation) {
             setMessages(conversation.messages);
             setActiveConversationId(conversationId);
@@ -80,7 +94,7 @@ Always specify the programming language after the opening backticks to enable pr
         }
       }
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      console.error("Error loading conversations:", error);
     } finally {
       setIsInitialized(true);
     }
@@ -89,17 +103,16 @@ Always specify the programming language after the opening backticks to enable pr
   // Save conversations to localStorage whenever they change
   useEffect(() => {
     if (!isInitialized) return;
-    localStorage.setItem('conversations', JSON.stringify(conversations));
+    localStorage.setItem("conversations", JSON.stringify(conversations));
   }, [conversations, isInitialized]);
-
 
   const createNewChat = () => {
     const newId = uuidv4();
     const newConversation: Conversation = {
       id: newId,
-      title: 'New Chat',
+      title: "New Chat",
       messages: [],
-      lastMessage: '',
+      lastMessage: "",
       timestamp: Date.now(),
     };
     setConversations((prev) => [newConversation, ...prev]);
@@ -122,11 +135,12 @@ Always specify the programming language after the opening backticks to enable pr
       prev.map((conv) =>
         conv.id === activeConversationId
           ? {
-            ...conv,
-            messages: updatedMessages,
-            lastMessage: updatedMessages[updatedMessages.length - 1]?.content || '',
-            timestamp: Date.now(),
-          }
+              ...conv,
+              messages: updatedMessages,
+              lastMessage:
+                updatedMessages[updatedMessages.length - 1]?.content || "",
+              timestamp: Date.now(),
+            }
           : conv
       )
     );
@@ -155,7 +169,7 @@ Always specify the programming language after the opening backticks to enable pr
     if (activeConversationId) {
       router.push(`/chat/${activeConversationId}`);
     } else {
-      router.push('/');
+      router.push("/");
     }
   }, [activeConversationId, router]);
 
@@ -163,28 +177,31 @@ Always specify the programming language after the opening backticks to enable pr
     e.preventDefault();
     if (!input.trim()) return;
 
-    const userMessage: Message = { role: 'user', content: input };
+    const userMessage: Message = { role: "user", content: input };
     const updatedMessages: Message[] = [...messages, userMessage];
     setMessages(updatedMessages);
     updateConversation(updatedMessages);
-    setInput('');
+    setInput("");
     setIsLoading(true);
 
     try {
       // Create a placeholder for the assistant's message
-      const messagesWithPlaceholder: Message[] = [...updatedMessages, { role: 'assistant' as const, content: '' }];
+      const messagesWithPlaceholder: Message[] = [
+        ...updatedMessages,
+        { role: "assistant" as const, content: "" },
+      ];
       setMessages(messagesWithPlaceholder);
       updateConversation(messagesWithPlaceholder);
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
+      const response = await fetch("/api/chat", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           messages: updatedMessages,
-          model: selectedModel,
-          systemPrompt: systemPrompt
+          model: GeminiModels[selectedModel],
+          systemPrompt: systemPrompt,
         }),
       });
 
@@ -194,7 +211,7 @@ Always specify the programming language after the opening backticks to enable pr
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let assistantMessage = '';
+      let assistantMessage = "";
 
       if (reader) {
         while (true) {
@@ -202,12 +219,12 @@ Always specify the programming language after the opening backticks to enable pr
           if (done) break;
 
           const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
+          const lines = chunk.split("\n");
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
+            if (line.startsWith("data: ")) {
               const data = line.slice(6);
-              if (data === '[DONE]') {
+              if (data === "[DONE]") {
                 break;
               }
 
@@ -217,23 +234,26 @@ Always specify the programming language after the opening backticks to enable pr
                   assistantMessage += parsed.text;
                   const finalMessages: Message[] = [
                     ...updatedMessages,
-                    { role: 'assistant' as const, content: assistantMessage },
+                    { role: "assistant" as const, content: assistantMessage },
                   ];
                   setMessages(finalMessages);
                   updateConversation(finalMessages);
                 }
               } catch (e) {
-                console.error('Error parsing JSON:', e);
+                console.error("Error parsing JSON:", e);
               }
             }
           }
         }
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
       const errorMessages: Message[] = [
         ...updatedMessages,
-        { role: 'assistant' as const, content: 'Sorry, there was an error processing your request.' },
+        {
+          role: "assistant" as const,
+          content: "Sorry, there was an error processing your request.",
+        },
       ];
       setMessages(errorMessages);
       updateConversation(errorMessages);
@@ -244,13 +264,13 @@ Always specify the programming language after the opening backticks to enable pr
 
   // Custom components for markdown rendering
 
-
   return (
     <div className="flex h-screen">
       <Sidebar
-        conversations={conversations.map(conv => ({
+        conversations={conversations.map((conv) => ({
           ...conv,
-          messages: conv.id === activeConversationId ? messages : conv.messages || []
+          messages:
+            conv.id === activeConversationId ? messages : conv.messages || [],
         }))}
         activeConversationId={activeConversationId}
         onNewChat={createNewChat}
@@ -270,21 +290,22 @@ Always specify the programming language after the opening backticks to enable pr
             onChange={(e) => setSelectedModel(e.target.value as GeminiModel)}
             className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-            <option value="gemma-3-27b-it">gemma-3-27b-it</option>
-            <option value="gemini-1.0-pro-latest">Gemini 1.0 Pro Latest</option>
+            {Object.entries(GeminiModels).map(([name, _]) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
           </select>
         </div>
         <div className="flex-1 overflow-y-auto mb-4 space-y-4">
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`p-4 rounded-lg ${message.role === 'user'
-                ? 'bg-blue-100 ml-auto'
-                : 'bg-gray-100'
-                } max-w-[90%]`}
+              className={`p-4 rounded-lg ${
+                message.role === "user" ? "bg-blue-100 ml-auto" : "bg-gray-100"
+              } max-w-[90%]`}
             >
-              {message.role === 'assistant' ? (
+              {message.role === "assistant" ? (
                 <div className="prose prose-sm max-w-none dark:prose-invert">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -298,12 +319,18 @@ Always specify the programming language after the opening backticks to enable pr
               )}
             </div>
           ))}
-          {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
+          {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
             <div className="bg-gray-100 p-4 rounded-lg max-w-[90%]">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                <div
+                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
+                <div
+                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.4s" }}
+                ></div>
               </div>
             </div>
           )}
@@ -331,7 +358,8 @@ Always specify the programming language after the opening backticks to enable pr
         isOpen={isSystemPromptModalOpen}
         onClose={() => setIsSystemPromptModalOpen(false)}
         systemPrompt={systemPrompt}
-        onSystemPromptChange={setSystemPrompt}
+        setSystemPrompt={setSystemPrompt}
+        defaultSystemPrompt={defaultSystemPrompt}
       />
     </div>
   );
