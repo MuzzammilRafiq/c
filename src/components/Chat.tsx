@@ -1,15 +1,13 @@
 'use client';
-
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Sidebar from './Sidebar';
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from 'next/navigation';
+import { MarkdownComponents } from '~/helpers/markdown-components';
 
-type GeminiModel = 'gemini-2.0-flash' | 'gemini-1.0-pro' | 'gemini-1.0-pro-latest';
+type GeminiModel = 'gemini-2.0-flash';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -74,10 +72,6 @@ export default function Chat({ conversationId }: ChatProps) {
     localStorage.setItem('conversations', JSON.stringify(conversations));
   }, [conversations, isInitialized]);
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   const createNewChat = () => {
     const newId = uuidv4();
@@ -227,81 +221,8 @@ export default function Chat({ conversationId }: ChatProps) {
     }
   };
 
-  // Custom renderer for code blocks
-  const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
-    const match = /language-(\w+)/.exec(className || '');
-    const language = match ? match[1] : 'text';
-    const [copied, setCopied] = useState(false);
-
-    const copyToClipboard = () => {
-      navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    };
-
-    return !inline && match ? (
-      <div className="relative group">
-        <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={copyToClipboard}
-            className="px-2 py-1 text-xs bg-gray-700 text-white rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {copied ? 'Copied!' : 'Copy'}
-          </button>
-        </div>
-        <SyntaxHighlighter
-          style={vscDarkPlus}
-          language={language}
-          PreTag="div"
-          {...props}
-        >
-          {String(children).replace(/\n$/, '')}
-        </SyntaxHighlighter>
-      </div>
-    ) : (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    );
-  };
-
   // Custom components for markdown rendering
-  const MarkdownComponents = {
-    code: CodeBlock,
-    p: ({ children }: any) => <p className="mb-4 leading-relaxed">{children}</p>,
-    h1: ({ children }: any) => <h1 className="text-2xl font-bold mb-4 mt-6">{children}</h1>,
-    h2: ({ children }: any) => <h2 className="text-xl font-bold mb-3 mt-5">{children}</h2>,
-    h3: ({ children }: any) => <h3 className="text-lg font-bold mb-2 mt-4">{children}</h3>,
-    h4: ({ children }: any) => <h4 className="text-base font-bold mb-2 mt-3">{children}</h4>,
-    ul: ({ children }: any) => <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>,
-    ol: ({ children }: any) => <ol className="list-decimal pl-6 mb-4 space-y-1">{children}</ol>,
-    li: ({ children }: any) => <li className="mb-1">{children}</li>,
-    blockquote: ({ children }: any) => (
-      <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4">{children}</blockquote>
-    ),
-    a: ({ href, children }: any) => (
-      <a href={href} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
-        {children}
-      </a>
-    ),
-    table: ({ children }: any) => (
-      <div className="overflow-x-auto my-4">
-        <table className="min-w-full border-collapse border border-gray-300">
-          {children}
-        </table>
-      </div>
-    ),
-    th: ({ children }: any) => (
-      <th className="border border-gray-300 px-4 py-2 bg-gray-100 font-bold">{children}</th>
-    ),
-    td: ({ children }: any) => (
-      <td className="border border-gray-300 px-4 py-2">{children}</td>
-    ),
-    hr: () => <hr className="my-6 border-t border-gray-300" />,
-    img: ({ src, alt }: any) => (
-      <img src={src} alt={alt} className="max-w-full h-auto rounded-lg my-4" />
-    ),
-  };
+
 
   return (
     <div className="flex h-screen">
@@ -323,7 +244,7 @@ export default function Chat({ conversationId }: ChatProps) {
             className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-            <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
+            <option value="gemma-3-27b-it">gemma-3-27b-it</option>
             <option value="gemini-1.0-pro-latest">Gemini 1.0 Pro Latest</option>
           </select>
         </div>
