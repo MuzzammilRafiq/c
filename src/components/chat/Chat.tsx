@@ -1,75 +1,26 @@
 "use client";
+
 import { useState, useRef, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import Sidebar from "./Sidebar";
-import SystemPromptModal from "./SystemPromptModal";
-import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
-import { MarkdownComponents } from "~/helpers/markdown-components";
-
-const GeminiModels = {
-  "Gemini 2.0 Flash Lite": "gemini-2.0-flash-lite",
-  "Gemini 1.5 Pro": "gemini-1.5-pro-latest",
-  "Gemini 1.5 Flash": "gemini-1.5-flash-latest",
-  "Gemini 1.5 Flash 8B": "gemini-1.5-flash-8b-latest",
-  "Gemini 2.0 Flash": "gemini-2.0-flash",
-  "Gemini 2.0 Pro Exp": "gemini-2.0-pro-exp",
-  "Gemma 3 1B": "gemma-3-1b-it",
-  "Gemma 3 4B": "gemma-3-4b-it",
-  "Gemma 3 12B": "gemma-3-12b-it",
-  "Gemma 3 27B": "gemma-3-27b-it",
-};
-type GeminiModel = keyof typeof GeminiModels;
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
-
-interface Conversation {
-  id: string;
-  title: string;
-  messages: Message[];
-  lastMessage: string;
-  timestamp: number;
-}
-
-interface ChatProps {
-  conversationId?: string;
-}
-
-const defaultSystemPrompt = `Please format your responses using Markdown syntax. Use headings, lists, and other Markdown features to make your responses more readable and structured.When including code examples, always use proper code blocks with language specification like this:
-\`\`\`javascript
-// JavaScript code example
-const greeting = "Hello, world!";
-console.log(greeting);
-\`\`\`
-\`\`\`python
-# Python code example
-def greet(name):
-    return f"Hello, {name}!"
-print(greet("World"))
-\`\`\`
-Always specify the programming language after the opening backticks to enable proper syntax highlighting.`;
+import Sidebar from "../Sidebar";
+import { ChatProps, Conversation, Message, GeminiModel } from "./types";
+import { themeOptions } from "./theme";
+import ChatStyle from "./chat-style";
+import { createNewChat, selectConversation, updateConversation, deleteConversation } from "./chat-crud";
 
 export default function Chat({ conversationId }: ChatProps) {
   const router = useRouter();
+  const [selectedThemeName, setSelectedThemeName] = useState("vscDarkPlus");
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<
-    string | null
-  >(conversationId || null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationId || null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSidebarVisible, setSidebarVisible] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>(
-    "Gemini 2.0 Flash Lite"
-  );
-  const [systemPrompt, setSystemPrompt] = useState<string>(defaultSystemPrompt);
-  const [isSystemPromptModalOpen, setIsSystemPromptModalOpen] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>("gemini-2.0-flash");
 
-  // Load conversations from localStorage on initial render
   useEffect(() => {
     if (isInitialized) return;
 
@@ -100,71 +51,15 @@ export default function Chat({ conversationId }: ChatProps) {
     }
   }, [conversationId, router, isInitialized]);
 
-  // Save conversations to localStorage whenever they change
   useEffect(() => {
     if (!isInitialized) return;
     localStorage.setItem("conversations", JSON.stringify(conversations));
   }, [conversations, isInitialized]);
 
-  const createNewChat = () => {
-    const newId = uuidv4();
-    const newConversation: Conversation = {
-      id: newId,
-      title: "New Chat",
-      messages: [],
-      lastMessage: "",
-      timestamp: Date.now(),
-    };
-    setConversations((prev) => [newConversation, ...prev]);
-    setActiveConversationId(newId);
-    setMessages([]);
-    router.push(`/chat/${newId}`);
-  };
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  const selectConversation = (id: string) => {
-    const conversation = conversations.find((c) => c.id === id);
-    if (conversation) {
-      setActiveConversationId(id);
-      setMessages(conversation.messages || []);
-      router.push(`/chat/${id}`);
-    }
-  };
-
-  const updateConversation = (updatedMessages: Message[]) => {
-    setConversations((prev) =>
-      prev.map((conv) =>
-        conv.id === activeConversationId
-          ? {
-              ...conv,
-              messages: updatedMessages,
-              lastMessage:
-                updatedMessages[updatedMessages.length - 1]?.content || "",
-              timestamp: Date.now(),
-            }
-          : conv
-      )
-    );
-  };
-
-  const deleteConversation = (id: string) => {
-    setConversations((prev) => {
-      const newConversations = prev.filter((conv) => conv.id !== id);
-      // If we're deleting the active conversation, select the first remaining one
-      if (id === activeConversationId) {
-        if (newConversations.length > 0) {
-          const nextId = newConversations[0].id;
-          setActiveConversationId(nextId);
-          setMessages(newConversations[0].messages || []);
-        } else {
-          setActiveConversationId(null);
-          setMessages([]);
-        }
-      }
-      return newConversations;
-    });
-  };
-
-  // Add effect to handle navigation after state updates
   useEffect(() => {
     if (activeConversationId) {
       router.push(`/chat/${activeConversationId}`);
@@ -173,6 +68,18 @@ export default function Chat({ conversationId }: ChatProps) {
     }
   }, [activeConversationId, router]);
 
+  const handleSelectConversation = (id: string) => {
+    selectConversation(id, conversations, setActiveConversationId, setMessages, router);
+  };
+
+  const handleUpdateConversation = (updatedMessages: Message[]) => {
+    updateConversation(activeConversationId, updatedMessages, setConversations);
+  };
+
+  const handleDeleteConversation = (id: string) => {
+    deleteConversation(id, setConversations, setActiveConversationId, setMessages, activeConversationId);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -180,18 +87,17 @@ export default function Chat({ conversationId }: ChatProps) {
     const userMessage: Message = { role: "user", content: input };
     const updatedMessages: Message[] = [...messages, userMessage];
     setMessages(updatedMessages);
-    updateConversation(updatedMessages);
+    handleUpdateConversation(updatedMessages);
     setInput("");
     setIsLoading(true);
 
     try {
-      // Create a placeholder for the assistant's message
       const messagesWithPlaceholder: Message[] = [
         ...updatedMessages,
         { role: "assistant" as const, content: "" },
       ];
       setMessages(messagesWithPlaceholder);
-      updateConversation(messagesWithPlaceholder);
+      handleUpdateConversation(messagesWithPlaceholder);
 
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -200,8 +106,7 @@ export default function Chat({ conversationId }: ChatProps) {
         },
         body: JSON.stringify({
           messages: updatedMessages,
-          model: GeminiModels[selectedModel],
-          systemPrompt: systemPrompt,
+          model: selectedModel,
         }),
       });
 
@@ -237,7 +142,7 @@ export default function Chat({ conversationId }: ChatProps) {
                     { role: "assistant" as const, content: assistantMessage },
                   ];
                   setMessages(finalMessages);
-                  updateConversation(finalMessages);
+                  handleUpdateConversation(finalMessages);
                 }
               } catch (e) {
                 console.error("Error parsing JSON:", e);
@@ -256,46 +161,58 @@ export default function Chat({ conversationId }: ChatProps) {
         },
       ];
       setMessages(errorMessages);
-      updateConversation(errorMessages);
+      handleUpdateConversation(errorMessages);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Custom components for markdown rendering
-
   return (
     <div className="flex h-screen">
-      <Sidebar
-        conversations={conversations.map((conv) => ({
-          ...conv,
-          messages:
-            conv.id === activeConversationId ? messages : conv.messages || [],
-        }))}
-        activeConversationId={activeConversationId}
-        onNewChat={createNewChat}
-        onSelectConversation={selectConversation}
-        onDeleteConversation={deleteConversation}
-      />
+      {isSidebarVisible && (
+        <Sidebar
+          conversations={conversations.map((conv) => ({
+            ...conv,
+            messages:
+              conv.id === activeConversationId ? messages : conv.messages || [],
+          }))}
+          activeConversationId={activeConversationId}
+          onNewChat={()=>createNewChat(setConversations, setActiveConversationId, setMessages, router)}
+          onSelectConversation={handleSelectConversation}
+          onDeleteConversation={handleDeleteConversation}
+        />
+      )}
       <div className="flex-1 flex flex-col max-w-5xl mx-auto p-4">
-        <div className="mb-4 flex justify-end gap-2">
+        <div className="mb-4 flex gap-4 justify-between">
           <button
-            onClick={() => setIsSystemPromptModalOpen(true)}
-            className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            onClick={() => setSidebarVisible(!isSidebarVisible)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label={isSidebarVisible ? "Hide sidebar" : "Show sidebar"}
           >
-            System Prompt
+            toggle
           </button>
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value as GeminiModel)}
-            className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {Object.entries(GeminiModels).map(([name, _]) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-4">
+            <select
+              value={selectedThemeName}
+              onChange={(e) => setSelectedThemeName(e.target.value)}
+              className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {themeOptions.map((theme) => (
+                <option key={theme.value} value={theme.value}>
+                  {theme.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value as GeminiModel)}
+              className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
+              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+            </select>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto mb-4 space-y-4">
           {messages.map((message, index) => (
@@ -306,14 +223,7 @@ export default function Chat({ conversationId }: ChatProps) {
               } max-w-[90%]`}
             >
               {message.role === "assistant" ? (
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={MarkdownComponents}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
-                </div>
+                <ChatStyle content={message.content} selectedThemeName={selectedThemeName} />
               ) : (
                 <div className="font-medium">{message.content}</div>
               )}
@@ -354,13 +264,6 @@ export default function Chat({ conversationId }: ChatProps) {
           </button>
         </form>
       </div>
-      <SystemPromptModal
-        isOpen={isSystemPromptModalOpen}
-        onClose={() => setIsSystemPromptModalOpen(false)}
-        systemPrompt={systemPrompt}
-        setSystemPrompt={setSystemPrompt}
-        defaultSystemPrompt={defaultSystemPrompt}
-      />
     </div>
   );
 }
