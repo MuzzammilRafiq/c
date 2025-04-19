@@ -1,3 +1,5 @@
+import { Message } from "~/app/chat/[id]/_components/types";
+
 export interface SearxngSearchOptions {
   category?: string[];
   engines?: string[];
@@ -27,4 +29,11 @@ export interface SearxngSearchResult {
 export interface SearchAgentResult {
   answer: string;
   sources: Document[];
+}
+
+export interface RequestBody {
+  query: string;
+  history: Message[];
+  model?: string;
+  systemInstructions?: string;
 }

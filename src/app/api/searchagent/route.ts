@@ -1,21 +1,34 @@
 import { NextResponse } from "next/server";
 import { main } from "./_search/main";
-export async function GET() {
+import { RequestBody } from "./_search/types";
+export async function POST(req: Request) {
   try {
+    const {
+      query,
+      history,
+      model = "gemini-2.0-flash", // Optional: allow model selection via API
+      systemInstructions = "Provide a concise summary in bullet points.",
+    }: RequestBody = await req.json();
+
+    if (!query) {
+      return NextResponse.json({ message: "Query is required" }, { status: 400 });
+    }
+
     const res = await main({
-      model: "gemini-2.0-flash",
-      query: "What is the capital of France?",
+      model,
+      query,
+      history,
+      systemInstructions,
     });
     if (res.sucess === false) {
       throw new Error(res.message);
     }
-
     return NextResponse.json(
       {
         data: res.data,
         status: "success",
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.log("Error in GET /api/searchagent:", error);
@@ -24,7 +37,7 @@ export async function GET() {
         message: "Internal Server Error",
         status: "error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
