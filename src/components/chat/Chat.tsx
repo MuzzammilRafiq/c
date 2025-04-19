@@ -1,6 +1,7 @@
 "use client";
+
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "../Sidebar";
 import { ChatProps, Conversation, Message, GeminiModel } from "./types";
 import { themeOptions } from "./theme";
@@ -11,26 +12,31 @@ import {
   updateConversation,
   deleteConversation,
 } from "./chat-crud";
-import { Globe } from "lucide-react";
+import { Menu } from "lucide-react";
+
+import ChatInput from "./chat-input";
+
 export default function Chat({ conversationId }: ChatProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [selectedThemeName, setSelectedThemeName] = useState("vscDarkPlus");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<
     string | null
   >(conversationId || null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarVisible, setSidebarVisible] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedModel, setSelectedModel] =
     useState<GeminiModel>("gemini-2.0-flash");
+  console.log(pathname);
   const [isToggled, setIsToggled] = useState(false);
   const handleToggle = () => {
-    setIsToggled((isToggled) => !isToggled);
+    setIsToggled((prev) => !prev);
   };
+
   useEffect(() => {
     if (isInitialized) return;
 
@@ -45,21 +51,36 @@ export default function Chat({ conversationId }: ChatProps) {
             (c: Conversation) => c.id === conversationId
           );
           if (conversation) {
-            setMessages(conversation.messages);
+            setMessages(conversation.messages || []);
             setActiveConversationId(conversationId);
+          } else {
+            console.warn(
+              `Conversation ${conversationId} not found in storage.`
+            );
+            router.push("/");
           }
         } else if (parsed.length > 0) {
           setActiveConversationId(parsed[0].id);
-          setMessages(parsed[0].messages);
+          setMessages(parsed[0].messages || []);
           router.push(`/chat/${parsed[0].id}`);
+        } else {
+          if (pathname !== "/") {
+            router.push("/");
+          }
+        }
+      } else {
+        if (pathname !== "/") {
+          router.push("/");
         }
       }
     } catch (error) {
       console.error("Error loading conversations:", error);
+      localStorage.removeItem("conversations");
+      router.push("/");
     } finally {
       setIsInitialized(true);
     }
-  }, [conversationId, router, isInitialized]);
+  }, [conversationId, router, isInitialized, pathname]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -71,12 +92,16 @@ export default function Chat({ conversationId }: ChatProps) {
   }, [messages]);
 
   useEffect(() => {
-    if (activeConversationId) {
-      router.push(`/chat/${activeConversationId}`);
-    } else {
-      router.push("/");
+    if (!isInitialized) return;
+
+    const targetPath = activeConversationId
+      ? `/chat/${activeConversationId}`
+      : "/";
+
+    if (pathname !== targetPath) {
+      router.push(targetPath);
     }
-  }, [activeConversationId, router]);
+  }, [activeConversationId, isInitialized, pathname, router]);
 
   const handleSelectConversation = (id: string) => {
     selectConversation(
@@ -102,15 +127,14 @@ export default function Chat({ conversationId }: ChatProps) {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const handleSendMessage = async (messageContent: string) => {
+    if (!messageContent.trim() || !activeConversationId) return;
 
-    const userMessage: Message = { role: "user", content: input };
+    const userMessage: Message = { role: "user", content: messageContent };
     const updatedMessages: Message[] = [...messages, userMessage];
+
     setMessages(updatedMessages);
     handleUpdateConversation(updatedMessages);
-    setInput("");
     setIsLoading(true);
 
     try {
@@ -123,30 +147,11 @@ export default function Chat({ conversationId }: ChatProps) {
 
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: updatedMessages,
           model: selectedModel,
-          systemPrompt: `Please format your responses using Markdown syntax. Use headings, lists, and other Markdown features to make your responses more readable and structured.
-
-            When including code examples, always use proper code blocks with language specification like this:
-            
-            \`\`\`javascript
-            // JavaScript code example
-            const greeting = "Hello, world!";
-            console.log(greeting);
-            \`\`\`
-            
-            \`\`\`python
-            # Python code example
-            def greet(name):
-                return f"Hello, {name}!"
-            print(greet("World"))
-            \`\`\`
-            
-            Always specify the programming language after the opening backticks to enable proper syntax highlighting.`,
+          systemPrompt: `Please format your responses using Markdown syntax...`,
         }),
       });
 
@@ -156,43 +161,50 @@ export default function Chat({ conversationId }: ChatProps) {
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let assistantMessage = "";
+      let assistantMessageContent = "";
 
       if (reader) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value);
+          const chunk = decoder.decode(value, { stream: true });
           const lines = chunk.split("\n");
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               const data = line.slice(6);
-              if (data === "[DONE]") {
-                break;
-              }
+              if (data === "[DONE]") break;
 
               try {
                 const parsed = JSON.parse(data);
                 if (parsed.text) {
-                  assistantMessage += parsed.text;
+                  assistantMessageContent += parsed.text;
                   const finalMessages: Message[] = [
                     ...updatedMessages,
-                    { role: "assistant" as const, content: assistantMessage },
+                    {
+                      role: "assistant" as const,
+                      content: assistantMessageContent,
+                    },
                   ];
                   setMessages(finalMessages);
                   handleUpdateConversation(finalMessages);
                 }
               } catch (e) {
-                console.error("Error parsing JSON:", e);
+                console.error("Error parsing JSON chunk:", e, "Data:", data);
               }
             }
           }
         }
       }
+      const finalMessagesComplete: Message[] = [
+        ...updatedMessages,
+        { role: "assistant" as const, content: assistantMessageContent },
+      ];
+      setMessages(finalMessagesComplete);
+      handleUpdateConversation(finalMessagesComplete);
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error sending message:", error);
       const errorMessages: Message[] = [
         ...updatedMessages,
         {
@@ -208,13 +220,13 @@ export default function Chat({ conversationId }: ChatProps) {
   };
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-white">
+      {" "}
       {isSidebarVisible && (
         <Sidebar
           conversations={conversations.map((conv) => ({
             ...conv,
-            messages:
-              conv.id === activeConversationId ? messages : conv.messages || [],
+            messages: [],
           }))}
           activeConversationId={activeConversationId}
           onNewChat={() =>
@@ -229,20 +241,22 @@ export default function Chat({ conversationId }: ChatProps) {
           onDeleteConversation={handleDeleteConversation}
         />
       )}
-      <div className="flex-1 flex flex-col max-w-5xl mx-auto p-4">
-        <div className="mb-4 flex gap-4 justify-between">
+      <div className="flex-1 flex flex-col max-w-5xl mx-auto p-4 overflow-hidden">
+        {" "}
+        <div className="mb-4 flex gap-4 justify-between items-center flex-shrink-0">
+          {" "}
           <button
             onClick={() => setSidebarVisible(!isSidebarVisible)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             aria-label={isSidebarVisible ? "Hide sidebar" : "Show sidebar"}
           >
-            toggle
+            <Menu size={20} />
           </button>
           <div className="flex gap-4">
             <select
               value={selectedThemeName}
               onChange={(e) => setSelectedThemeName(e.target.value)}
-              className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             >
               {themeOptions.map((theme) => (
                 <option key={theme.value} value={theme.value}>
@@ -254,82 +268,79 @@ export default function Chat({ conversationId }: ChatProps) {
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value as GeminiModel)}
-              className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             >
-              <option value="gemini-2.0-flash-lite">
-                Gemini 2.0 Flash Lite
-              </option>
-              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+              <option value="gemini-2.0-flash-lite">Flash Lite</option>
+              <option value="gemini-2.0-flash">Flash</option>
             </select>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+        <div className="flex-1 overflow-y-auto mb-4 space-y-4 pr-2">
+          {" "}
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`p-4 rounded-lg ${
-                message.role === "user" ? "bg-blue-100 ml-auto" : "bg-gray-100"
-              } max-w-[90%]`}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {message.role === "assistant" ? (
-                <ChatStyle
-                  content={message.content}
-                  selectedThemeName={selectedThemeName}
-                />
-              ) : (
-                <div className="font-medium">{message.content}</div>
-              )}
+              <div
+                className={`p-3 rounded-lg shadow-sm ${
+                  message.role === "user"
+                    ? "bg-blue-500 text-white ml-auto"
+                    : "bg-gray-100 text-gray-800"
+                } max-w-[85%] break-words`}
+              >
+                {message.role === "assistant" ? (
+                  <ChatStyle
+                    content={message.content || ""}
+                    selectedThemeName={selectedThemeName}
+                  />
+                ) : (
+                  <div className="whitespace-pre-wrap">{message.content}</div>
+                )}
+              </div>
             </div>
           ))}
-          {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-            <div className="bg-gray-100 p-4 rounded-lg max-w-[90%]">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                <div
-                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                  style={{ animationDelay: "0.2s" }}
-                ></div>
-                <div
-                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                  style={{ animationDelay: "0.4s" }}
-                ></div>
+          {isLoading &&
+            messages[messages.length - 1]?.role === "assistant" &&
+            messages[messages.length - 1]?.content === "" && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 p-3 rounded-lg shadow-sm max-w-[85%]">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                    <div
+                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.4s" }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          {isLoading && messages[messages.length - 1]?.role === "user" && (
+            <div className="flex justify-start">
+              <div className="bg-gray-100 p-3 rounded-lg shadow-sm max-w-[85%]">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">
+                    Generating response...
+                  </span>
+                </div>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <div className="flex-1">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
-              className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isLoading}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Send
-          </button>
-          <button
-            onClick={handleToggle}
-            style={{
-              backgroundColor: "transparent",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "24px",
-              color: isToggled ? "#87CEEB" : "#808080",
-              transition: "color 0.3s",
-            }}
-          >
-            <Globe />
-          </button>
-        </form>
+        <div className="mt-auto flex-shrink-0 pb-2">
+          {" "}
+          <ChatInput
+            onSubmit={handleSendMessage}
+            isLoading={isLoading}
+            isToggled={isToggled}
+            onToggle={handleToggle}
+          />
+        </div>
       </div>
     </div>
   );
