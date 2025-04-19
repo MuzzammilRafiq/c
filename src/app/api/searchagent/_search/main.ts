@@ -3,7 +3,7 @@ import { getGeminiChatModel, getGeminiEmbeddingModel } from "./providers";
 import { Agent } from "./agent";
 import { BaseMessage } from "@langchain/core/messages";
 
-async function main({ model, query }: { model: string; query: string }) {
+export async function main({ model, query }: { model: string; query: string }) {
   let llm;
   let retrieverllm;
   let embeddings;
@@ -27,8 +27,9 @@ async function main({ model, query }: { model: string; query: string }) {
     console.log(
       "With history:",
       chatHistory
+        //@ts-ignore
         .map((m) => `${m._getType()}: ${m.content.substring(0, 50)}...`)
-        .join("\n")
+        .join("\n"),
     );
   }
   if (systemInstructions) {
@@ -38,12 +39,16 @@ async function main({ model, query }: { model: string; query: string }) {
     const result = await agent.processQuery(
       userQuery,
       chatHistory,
-      systemInstructions
+      systemInstructions,
     );
 
-    return result;
+    return { data: result, sucess: true };
   } catch (error: any) {
     console.error("\n--- An error occurred during processing ---");
     console.error(error.message);
+    return {
+      message: "something went wrong while agent was running",
+      sucess: false,
+    };
   }
 }

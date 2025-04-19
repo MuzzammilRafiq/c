@@ -6,7 +6,7 @@ export const createNewChat = (
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
   setActiveConversationId: React.Dispatch<React.SetStateAction<string | null>>,
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-  router: ReturnType<typeof useRouter>
+  router: ReturnType<typeof useRouter>,
 ) => {
   const newId = uuidv4();
   const newConversation: Conversation = {
@@ -27,7 +27,7 @@ export const selectConversation = (
   conversations: Conversation[],
   setActiveConversationId: React.Dispatch<React.SetStateAction<string | null>>,
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-  router: ReturnType<typeof useRouter>
+  router: ReturnType<typeof useRouter>,
 ) => {
   const conversation = conversations.find((c) => c.id === id);
   if (conversation) {
@@ -40,7 +40,7 @@ export const selectConversation = (
 export const updateConversation = (
   activeConversationId: string | null,
   updatedMessages: Message[],
-  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>
+  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
 ) => {
   setConversations((prev) =>
     prev.map((conv) =>
@@ -52,8 +52,8 @@ export const updateConversation = (
               updatedMessages[updatedMessages.length - 1]?.content || "",
             timestamp: Date.now(),
           }
-        : conv
-    )
+        : conv,
+    ),
   );
 };
 
@@ -62,7 +62,7 @@ export const deleteConversation = (
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
   setActiveConversationId: React.Dispatch<React.SetStateAction<string | null>>,
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-  activeConversationId: string | null
+  activeConversationId: string | null,
 ) => {
   setConversations((prev) => {
     const newConversations = prev.filter((conv) => conv.id !== id);

@@ -11,7 +11,6 @@ export default function ChatStyle({
   content: string;
   selectedThemeName: string;
 }) {
-
   const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
     const match = /language-(\w+)/.exec(className || "");
     const language = match ? match[1] : "text";

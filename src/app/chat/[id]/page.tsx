@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Chat from '~/components/Chat';
-import { use } from 'react';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Chat from "~/components/chat/Chat";
+import { use } from "react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,16 +17,20 @@ export default function ChatPage({ params }: PageProps) {
   useEffect(() => {
     const checkConversation = () => {
       try {
-        const conversations = JSON.parse(localStorage.getItem('conversations') || '[]');
-        const conversationExists = conversations.some((conv: any) => conv.id === resolvedParams.id);
-        
+        const conversations = JSON.parse(
+          localStorage.getItem("conversations") || "[]",
+        );
+        const conversationExists = conversations.some(
+          (conv: any) => conv.id === resolvedParams.id,
+        );
+
         if (!conversationExists) {
           // If conversation doesn't exist, redirect to home
-          router.push('/');
+          router.push("/");
         }
       } catch (error) {
-        console.error('Error checking conversation:', error);
-        router.push('/');
+        console.error("Error checking conversation:", error);
+        router.push("/");
       } finally {
         setIsLoading(false);
       }
@@ -48,4 +52,4 @@ export default function ChatPage({ params }: PageProps) {
       <Chat conversationId={resolvedParams.id} />
     </main>
   );
-} 
+}

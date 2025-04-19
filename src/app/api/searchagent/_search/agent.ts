@@ -37,7 +37,7 @@ export class Agent {
   constructor(
     llm: BaseChatModel,
     retrieverLlm: BaseChatModel,
-    embeddings: Embeddings
+    embeddings: Embeddings,
   ) {
     this.llm = llm;
     this.retrieverLlm = retrieverLlm;
@@ -46,7 +46,7 @@ export class Agent {
 
   private async retrieveAndRankDocs(
     query: string,
-    history: BaseMessage[]
+    history: BaseMessage[],
   ): Promise<{ finalQuery: string | null; rankedDocs: Document[] }> {
     console.log("[Agent] Starting document retrieval and ranking...");
     const historyString = formatChatHistoryAsString(history);
@@ -89,20 +89,20 @@ export class Agent {
             new Document({
               pageContent: r.content || r.title || "", // Use title as fallback content
               metadata: { title: r.title, url: r.url },
-            })
+            }),
         );
       console.log(
-        `[Agent] Found ${initialDocs.length} initial search results.`
+        `[Agent] Found ${initialDocs.length} initial search results.`,
       );
     }
 
     // 3. Rerank documents
     const docsWithContent = initialDocs.filter(
-      (doc) => doc.pageContent && doc.pageContent.length > 10
+      (doc) => doc.pageContent && doc.pageContent.length > 10,
     ); // Ensure some content
     if (docsWithContent.length === 0) {
       console.log(
-        "[Agent] No documents with sufficient content found for ranking."
+        "[Agent] No documents with sufficient content found for ranking.",
       );
       return { finalQuery: rephrasedQuery, rankedDocs: [] };
     }
@@ -111,7 +111,7 @@ export class Agent {
     try {
       const [docEmbeddings, queryEmbedding] = await Promise.all([
         this.embeddings.embedDocuments(
-          docsWithContent.map((doc) => doc.pageContent)
+          docsWithContent.map((doc) => doc.pageContent),
         ),
         this.embeddings.embedQuery(rephrasedQuery),
       ]);
@@ -140,13 +140,13 @@ export class Agent {
         .map((score) => docsWithContent[score.index]);
 
       console.log(
-        `[Agent] Reranked - selected ${rankedDocs.length} documents.`
+        `[Agent] Reranked - selected ${rankedDocs.length} documents.`,
       );
       return { finalQuery: rephrasedQuery, rankedDocs };
     } catch (embeddingError: any) {
       console.error(
         "[Agent] Error during embedding/ranking:",
-        embeddingError.message
+        embeddingError.message,
       );
       // Fallback to returning top unfiltered docs if ranking fails
       return {
@@ -159,19 +159,19 @@ export class Agent {
   public async processQuery(
     userQuery: string,
     history: BaseMessage[] = [],
-    systemInstructions: string = "Be helpful."
+    systemInstructions: string = "Be helpful.",
   ): Promise<SearchAgentResult> {
     console.log(`[Agent] Processing query: "${userQuery}"`);
 
     const { finalQuery, rankedDocs } = await this.retrieveAndRankDocs(
       userQuery,
-      history
+      history,
     );
 
     // If retriever decided no search/answer needed, or if search failed entirely
     if (finalQuery === null) {
       console.log(
-        "[Agent] No search needed or retrieval failed, invoking LLM directly."
+        "[Agent] No search needed or retrieval failed, invoking LLM directly.",
       );
       // Invoke LLM without search context, only history and user query
       const directPrompt = ChatPromptTemplate.fromMessages([

@@ -1,26 +1,36 @@
 "use client";
-
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "../Sidebar";
 import { ChatProps, Conversation, Message, GeminiModel } from "./types";
 import { themeOptions } from "./theme";
 import ChatStyle from "./chat-style";
-import { createNewChat, selectConversation, updateConversation, deleteConversation } from "./chat-crud";
-
+import {
+  createNewChat,
+  selectConversation,
+  updateConversation,
+  deleteConversation,
+} from "./chat-crud";
+import { Globe } from "lucide-react";
 export default function Chat({ conversationId }: ChatProps) {
   const router = useRouter();
   const [selectedThemeName, setSelectedThemeName] = useState("vscDarkPlus");
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationId || null);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(conversationId || null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarVisible, setSidebarVisible] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>("gemini-2.0-flash");
-
+  const [selectedModel, setSelectedModel] =
+    useState<GeminiModel>("gemini-2.0-flash");
+  const [isToggled, setIsToggled] = useState(false);
+  const handleToggle = () => {
+    setIsToggled((isToggled) => !isToggled);
+  };
   useEffect(() => {
     if (isInitialized) return;
 
@@ -69,7 +79,13 @@ export default function Chat({ conversationId }: ChatProps) {
   }, [activeConversationId, router]);
 
   const handleSelectConversation = (id: string) => {
-    selectConversation(id, conversations, setActiveConversationId, setMessages, router);
+    selectConversation(
+      id,
+      conversations,
+      setActiveConversationId,
+      setMessages,
+      router
+    );
   };
 
   const handleUpdateConversation = (updatedMessages: Message[]) => {
@@ -77,7 +93,13 @@ export default function Chat({ conversationId }: ChatProps) {
   };
 
   const handleDeleteConversation = (id: string) => {
-    deleteConversation(id, setConversations, setActiveConversationId, setMessages, activeConversationId);
+    deleteConversation(
+      id,
+      setConversations,
+      setActiveConversationId,
+      setMessages,
+      activeConversationId
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,6 +129,24 @@ export default function Chat({ conversationId }: ChatProps) {
         body: JSON.stringify({
           messages: updatedMessages,
           model: selectedModel,
+          systemPrompt: `Please format your responses using Markdown syntax. Use headings, lists, and other Markdown features to make your responses more readable and structured.
+
+            When including code examples, always use proper code blocks with language specification like this:
+            
+            \`\`\`javascript
+            // JavaScript code example
+            const greeting = "Hello, world!";
+            console.log(greeting);
+            \`\`\`
+            
+            \`\`\`python
+            # Python code example
+            def greet(name):
+                return f"Hello, {name}!"
+            print(greet("World"))
+            \`\`\`
+            
+            Always specify the programming language after the opening backticks to enable proper syntax highlighting.`,
         }),
       });
 
@@ -177,7 +217,14 @@ export default function Chat({ conversationId }: ChatProps) {
               conv.id === activeConversationId ? messages : conv.messages || [],
           }))}
           activeConversationId={activeConversationId}
-          onNewChat={()=>createNewChat(setConversations, setActiveConversationId, setMessages, router)}
+          onNewChat={() =>
+            createNewChat(
+              setConversations,
+              setActiveConversationId,
+              setMessages,
+              router
+            )
+          }
           onSelectConversation={handleSelectConversation}
           onDeleteConversation={handleDeleteConversation}
         />
@@ -209,7 +256,9 @@ export default function Chat({ conversationId }: ChatProps) {
               onChange={(e) => setSelectedModel(e.target.value as GeminiModel)}
               className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
+              <option value="gemini-2.0-flash-lite">
+                Gemini 2.0 Flash Lite
+              </option>
               <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
             </select>
           </div>
@@ -223,7 +272,10 @@ export default function Chat({ conversationId }: ChatProps) {
               } max-w-[90%]`}
             >
               {message.role === "assistant" ? (
-                <ChatStyle content={message.content} selectedThemeName={selectedThemeName} />
+                <ChatStyle
+                  content={message.content}
+                  selectedThemeName={selectedThemeName}
+                />
               ) : (
                 <div className="font-medium">{message.content}</div>
               )}
@@ -247,20 +299,35 @@ export default function Chat({ conversationId }: ChatProps) {
           <div ref={messagesEndRef} />
         </div>
         <form onSubmit={handleSubmit} className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isLoading}
-          />
+          <div className="flex-1">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type your message..."
+              className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+          </div>
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Send
+          </button>
+          <button
+            onClick={handleToggle}
+            style={{
+              backgroundColor: "transparent",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "24px",
+              color: isToggled ? "#87CEEB" : "#808080",
+              transition: "color 0.3s",
+            }}
+          >
+            <Globe />
           </button>
         </form>
       </div>

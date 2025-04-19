@@ -2,7 +2,7 @@ import axios from "axios";
 import { SearxngSearchResult } from "./types";
 import chalk from "chalk";
 export const searchSearxng = async (
-  query: string
+  query: string,
 ): Promise<{ results: SearxngSearchResult[]; suggestions: string[] }> => {
   const searxngUrl = process.env.SEARXNG_URL || "http://localhost:8080";
   const url = new URL(searxngUrl + "/search");
@@ -24,12 +24,12 @@ export const searchSearxng = async (
     console.error(
       chalk.red(
         `[SearXNG] Error fetching search results for query "${query}":`,
-        error.message
-      )
+        error.message,
+      ),
     );
     if (axios.isAxiosError(error) && error.response) {
       console.error(
-        chalk.red("[SearXNG] Response Status:", error.response.status)
+        chalk.red("[SearXNG] Response Status:", error.response.status),
       );
       console.error(chalk.red("[SearXNG] Response Data:", error.response.data));
     }
