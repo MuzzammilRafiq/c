@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
           // Generate content with streaming using the full conversation history
           const result = await genModel.generateContentStream({
-            contents: [...formattedMessages, systemMessage],
+            contents: [systemMessage, ...formattedMessages],
           });
 
           // Process each chunk as it arrives
