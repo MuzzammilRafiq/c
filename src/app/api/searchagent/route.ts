@@ -15,15 +15,16 @@ export async function GET() {
         data: res.data,
         status: "success",
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
+    console.log("Error in GET /api/searchagent:", error);
     return NextResponse.json(
       {
         message: "Internal Server Error",
         status: "error",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

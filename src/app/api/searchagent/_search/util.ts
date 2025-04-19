@@ -25,7 +25,7 @@ export const computeSimilarity = (x: number[], y: number[]): number => {
 };
 
 export const parseRetrieverOutput = (
-  output: string,
+  output: string
 ): { query: string | null; links: string[] } => {
   output = output.trim();
   let query: string | null = null;
@@ -68,7 +68,7 @@ export const processDocsForContext = (docs: Document[]): string => {
           doc.metadata.title || "N/A"
         }\nSource URL: ${doc.metadata.url || "N/A"}\nContent:\n${
           doc.pageContent
-        }`,
+        }`
     )
     .join("\n\n---\n\n");
 };
@@ -76,7 +76,7 @@ export const processDocsForContext = (docs: Document[]): string => {
 export const getDocumentsFromLinks = async ({ links }: { links: string[] }) => {
   const splitter = new RecursiveCharacterTextSplitter();
 
-  let docs: Document[] = [];
+  const docs: Document[] = [];
 
   await Promise.all(
     links.map(async (link) => {
@@ -124,7 +124,7 @@ export const getDocumentsFromLinks = async ({ links }: { links: string[] }) => {
       } catch (err) {
         console.error(
           "An error occurred while getting documents from links: ",
-          err,
+          err
         );
 
         docs.push(
@@ -134,10 +134,10 @@ export const getDocumentsFromLinks = async ({ links }: { links: string[] }) => {
               title: "Failed to retrieve content",
               url: link,
             },
-          }),
+          })
         );
       }
-    }),
+    })
   );
 
   return docs;

@@ -17,7 +17,7 @@ export default function Home() {
 
       // Create a new conversation in localStorage first
       const existingConversations = JSON.parse(
-        localStorage.getItem("conversations") || "[]",
+        localStorage.getItem("conversations") || "[]"
       );
       const newConversation = {
         id: newId,
@@ -28,7 +28,7 @@ export default function Home() {
       };
       localStorage.setItem(
         "conversations",
-        JSON.stringify([newConversation, ...existingConversations]),
+        JSON.stringify([newConversation, ...existingConversations])
       );
 
       // Then navigate to the new conversation
@@ -47,7 +47,7 @@ export default function Home() {
         </h1>
         <p className="text-lg text-gray-600 mb-8">
           Start a new conversation with our AI assistant. Ask questions, get
-          help with coding, or explore any topic you're interested.
+          help with coding, or explore any topic you&apos;re interested.
         </p>
         <button
           onClick={handleStartConversation}

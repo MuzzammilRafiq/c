@@ -1,7 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-import chalk from "chalk";
-// Initialize the Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY || "");
 
 export async function POST(req: Request) {
@@ -11,7 +9,7 @@ export async function POST(req: Request) {
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
         { error: "Messages array is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -46,7 +44,7 @@ export async function POST(req: Request) {
             const text = chunk.text();
             if (text) {
               controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ text })}\n\n`),
+                encoder.encode(`data: ${JSON.stringify({ text })}\n\n`)
               );
             }
           }
@@ -73,7 +71,7 @@ export async function POST(req: Request) {
     console.error("Error:", error);
     return NextResponse.json(
       { error: "Failed to generate response" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -27,9 +27,18 @@ export async function main({ model, query }: { model: string; query: string }) {
     console.log(
       "With history:",
       chatHistory
-        //@ts-ignore
-        .map((m) => `${m._getType()}: ${m.content.substring(0, 50)}...`)
-        .join("\n"),
+        .map((m) => {
+          const content = m.content;
+          const preview =
+            typeof content === "string"
+              ? content.substring(0, 50)
+              : content
+                  .map((c) => JSON.stringify(c))
+                  .join(" ")
+                  .substring(0, 50);
+          return `${m._getType()}: ${preview}...`;
+        })
+        .join("\n")
     );
   }
   if (systemInstructions) {
@@ -39,7 +48,7 @@ export async function main({ model, query }: { model: string; query: string }) {
     const result = await agent.processQuery(
       userQuery,
       chatHistory,
-      systemInstructions,
+      systemInstructions
     );
 
     return { data: result, sucess: true };
