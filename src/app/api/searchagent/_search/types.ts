@@ -1,4 +1,4 @@
-import { Message } from "~/app/chat/[id]/_components/types";
+import { Message } from "~/app/(home)/chat/[id]/_components/types";
 
 export interface SearxngSearchOptions {
   category?: string[];

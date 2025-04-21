@@ -23,7 +23,6 @@ export default function ChatInput({ onSubmit, isLoading, isToggled, onToggle }: 
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2 items-center">
-      {" "}
       {/* Added items-center */}
       <div className="flex-1">
         <input

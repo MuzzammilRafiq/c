@@ -1,32 +1,23 @@
 import React from "react";
+import { useRouter } from "next/navigation";
+import { useUserContext } from "~/utils/context";
+import {
+  createNewChat,
+  selectConversation,
+  deleteConversation,
+} from "~/app/(home)/chat/[id]/_components/chat-crud";
 
-interface Conversation {
-  id: string;
-  title: string;
-  lastMessage: string;
-  timestamp: number;
-  messages: any[]; // Add messages array to track if conversation is empty
-}
+export default function Sidebar() {
+  const router = useRouter();
+  const {
+    conversations,
+    setMessages,
+    setConversations,
+    setActiveConversationId,
+    activeConversationId,
+  } = useUserContext();
 
-interface SidebarProps {
-  conversations: Conversation[];
-  activeConversationId: string | null;
-  onNewChat: () => void;
-  onSelectConversation: (id: string) => void;
-  onDeleteConversation: (id: string) => void;
-}
-
-export default function Sidebar({
-  conversations,
-  activeConversationId,
-  onNewChat,
-  onSelectConversation,
-  onDeleteConversation,
-}: SidebarProps) {
-  // Check if the active conversation is empty
-  const activeConversation = conversations.find(
-    (conv) => conv.id === activeConversationId
-  );
+  const activeConversation = conversations.find((conv) => conv.id === activeConversationId);
   const isActiveConversationEmpty = activeConversation
     ? !activeConversation.messages || activeConversation.messages.length === 0
     : false;
@@ -35,10 +26,30 @@ export default function Sidebar({
     return title.length > 20 ? title.substring(0, 20) + "..." : title;
   };
 
+  const handleSelectConversation = (id: string) => {
+    selectConversation(id, conversations, setActiveConversationId, setMessages, router);
+  };
+
+  const handleDeleteConversation = (id: string) => {
+    deleteConversation(
+      id,
+      setConversations,
+      setActiveConversationId,
+      setMessages,
+      activeConversationId,
+    );
+  };
+  const handleNewChat = () => {
+    setActiveConversationId("");
+    setMessages([]);
+    router.push("/");
+    // createNewChat(setConversations, setActiveConversationId, setMessages, router);
+  };
+
   return (
     <div className="w-64 h-screen bg-gray-800 p-4 flex flex-col">
       <button
-        onClick={onNewChat}
+        onClick={handleNewChat}
         disabled={isActiveConversationEmpty}
         className="w-full mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all transform hover:scale-102 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
       >
@@ -48,8 +59,7 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto space-y-2">
         {conversations.map((conversation) => {
           const firstUserMessage =
-            conversation.messages.find((msg) => msg.role === "user")?.content ||
-            "New Chat";
+            conversation.messages.find((msg) => msg.role === "user")?.content || "New Chat";
           return (
             <div
               key={conversation.id}
@@ -61,19 +71,15 @@ export default function Sidebar({
             >
               <div
                 className="cursor-pointer space-y-1"
-                onClick={() => onSelectConversation(conversation.id)}
+                onClick={() => handleSelectConversation(conversation.id)}
               >
-                <div className="font-medium truncate">
-                  {truncateTitle(firstUserMessage)}
-                </div>
-                <div className="text-sm opacity-75 truncate">
-                  {conversation.lastMessage}
-                </div>
+                <div className="font-medium truncate">{truncateTitle(firstUserMessage)}</div>
+                <div className="text-sm opacity-75 truncate">{conversation.lastMessage}</div>
               </div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDeleteConversation(conversation.id);
+                  handleDeleteConversation(conversation.id);
                 }}
                 className="absolute top-2 right-2 p-1.5 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-400 hover:bg-gray-600/50 rounded-full transition-all"
                 aria-label="Delete conversation"

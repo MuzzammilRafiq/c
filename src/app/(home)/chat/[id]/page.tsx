@@ -17,12 +17,8 @@ export default function ChatPage({ params }: PageProps) {
   useEffect(() => {
     const checkConversation = () => {
       try {
-        const conversations = JSON.parse(
-          localStorage.getItem("conversations") || "[]"
-        );
-        const conversationExists = conversations.some(
-          (conv: any) => conv.id === resolvedParams.id
-        );
+        const conversations = JSON.parse(localStorage.getItem("conversations") || "[]");
+        const conversationExists = conversations.some((conv: any) => conv.id === resolvedParams.id);
 
         if (!conversationExists) {
           // If conversation doesn't exist, redirect to home
@@ -48,7 +44,7 @@ export default function ChatPage({ params }: PageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white w-full">
       <Chat conversationId={resolvedParams.id} />
     </main>
   );
