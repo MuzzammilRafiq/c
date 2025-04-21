@@ -15,6 +15,8 @@ interface ContextType {
   setMessages: React.Dispatch<React.SetStateAction<MessageWithSources[]>>;
   activeConversationId: string | null;
   setActiveConversationId: React.Dispatch<React.SetStateAction<string | null>>;
+  isSearchToggled: boolean;
+  setIsSearchToggled: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const UserContext = React.createContext<ContextType | undefined>(undefined);
@@ -28,13 +30,14 @@ export function useUserContext() {
 }
 
 export function ContextProvider({ children }: { children: React.ReactNode }) {
+  const [isSearchToggled, setIsSearchToggled] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageWithSources[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<
-    string | null
-  >(conversationId || null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(
+    conversationId || null,
+  );
 
   const value = React.useMemo(
     () => ({
@@ -47,7 +50,10 @@ export function ContextProvider({ children }: { children: React.ReactNode }) {
       messages,
       setMessages,
       activeConversationId,
+
       setActiveConversationId,
+      isSearchToggled,
+      setIsSearchToggled,
     }),
     [
       isSidebarVisible,
@@ -60,7 +66,9 @@ export function ContextProvider({ children }: { children: React.ReactNode }) {
       setMessages,
       activeConversationId,
       setActiveConversationId,
-    ]
+      isSearchToggled,
+      setIsSearchToggled,
+    ],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

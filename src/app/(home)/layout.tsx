@@ -21,7 +21,7 @@ export default function RootLayout({
   }, []);
 
   return (
-    <div className="flex h-screen bg-pink-500">
+    <div className="flex h-screen">
       {isSidebarVisible && <Sidebar />}
       {children}
     </div>
