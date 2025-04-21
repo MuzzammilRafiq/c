@@ -1,21 +1,29 @@
 "use client";
-
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { useState } from "react";
 
 export default function Home() {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
 
+  if (status === "loading") {
+    return <p>Loading...</p>;
+  }
+
+  if (!session) {
+    router.replace("/auth");
+  }
+
   const handleStartConversation = async () => {
-    if (isNavigating) return; // Prevent multiple clicks
+    if (isNavigating) return;
 
     try {
       setIsNavigating(true);
       const newId = uuidv4();
 
-      // Create a new conversation in localStorage first
       const existingConversations = JSON.parse(
         localStorage.getItem("conversations") || "[]"
       );

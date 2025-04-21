@@ -25,13 +25,12 @@ export default function Sidebar({
 }: SidebarProps) {
   // Check if the active conversation is empty
   const activeConversation = conversations.find(
-    (conv) => conv.id === activeConversationId,
+    (conv) => conv.id === activeConversationId
   );
   const isActiveConversationEmpty = activeConversation
     ? !activeConversation.messages || activeConversation.messages.length === 0
     : false;
 
-  // Function to truncate title to first few characters
   const truncateTitle = (title: string) => {
     return title.length > 20 ? title.substring(0, 20) + "..." : title;
   };

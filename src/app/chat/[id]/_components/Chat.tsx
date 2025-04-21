@@ -3,26 +3,41 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "~/components/Sidebar";
-import { ChatProps, Conversation, Message, GeminiModel, MessageWithSources } from "./types";
+import {
+  ChatProps,
+  Conversation,
+  Message,
+  GeminiModel,
+  MessageWithSources,
+} from "./types";
 import { themeOptions } from "./theme";
 import ChatStyle from "./chat-style";
-import { createNewChat, selectConversation, updateConversation, deleteConversation } from "./chat-crud";
+import {
+  createNewChat,
+  selectConversation,
+  updateConversation,
+  deleteConversation,
+} from "./chat-crud";
 import { Menu } from "lucide-react";
 import ChatInput from "./chat-input";
 import { systemPrompt } from "./prompt";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function Chat({ conversationId }: ChatProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [selectedThemeName, setSelectedThemeName] = useState("vscDarkPlus");
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationId || null);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(conversationId || null);
   const [messages, setMessages] = useState<MessageWithSources[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarVisible, setSidebarVisible] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<GeminiModel>("gemini-2.0-flash");
+  const [selectedModel, setSelectedModel] =
+    useState<GeminiModel>("gemini-2.0-flash");
   const [isToggled, setIsToggled] = useState(false);
   // --- State for Sources Dropdown ---
   const [openSources, setOpenSources] = useState<Record<number, boolean>>({});
@@ -56,14 +71,18 @@ export default function Chat({ conversationId }: ChatProps) {
         setConversations(parsed);
 
         if (conversationId) {
-          const conversation = parsed.find((c: Conversation) => c.id === conversationId);
+          const conversation = parsed.find(
+            (c: Conversation) => c.id === conversationId
+          );
           if (conversation) {
             setMessages(conversation.messages || []);
             setActiveConversationId(conversationId);
             // Reset source dropdown state on conversation load
             setOpenSources({});
           } else {
-            console.warn(`Conversation ${conversationId} not found in storage.`);
+            console.warn(
+              `Conversation ${conversationId} not found in storage.`
+            );
             router.push("/");
           }
         } else if (parsed.length > 0) {
@@ -106,7 +125,10 @@ export default function Chat({ conversationId }: ChatProps) {
 
   useEffect(() => {
     // Only scroll if not loading a new message or if the last message isn't an empty placeholder
-    if (!isLoading || (messages.length > 0 && messages[messages.length - 1].content !== "")) {
+    if (
+      !isLoading ||
+      (messages.length > 0 && messages[messages.length - 1].content !== "")
+    ) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isLoading]); // Add isLoading dependency
@@ -114,7 +136,9 @@ export default function Chat({ conversationId }: ChatProps) {
   useEffect(() => {
     if (!isInitialized) return;
 
-    const targetPath = activeConversationId ? `/chat/${activeConversationId}` : "/";
+    const targetPath = activeConversationId
+      ? `/chat/${activeConversationId}`
+      : "/";
 
     if (pathname !== targetPath) {
       router.push(targetPath);
@@ -122,7 +146,13 @@ export default function Chat({ conversationId }: ChatProps) {
   }, [activeConversationId, isInitialized, pathname, router]);
 
   const handleSelectConversation = (id: string) => {
-    selectConversation(id, conversations, setActiveConversationId, setMessages, router);
+    selectConversation(
+      id,
+      conversations,
+      setActiveConversationId,
+      setMessages,
+      router
+    );
     // Reset source dropdown state when selecting a conversation
     setOpenSources({});
   };
@@ -133,7 +163,13 @@ export default function Chat({ conversationId }: ChatProps) {
   };
 
   const handleDeleteConversation = (id: string) => {
-    deleteConversation(id, setConversations, setActiveConversationId, setMessages, activeConversationId);
+    deleteConversation(
+      id,
+      setConversations,
+      setActiveConversationId,
+      setMessages,
+      activeConversationId
+    );
     // Reset source dropdown state if the active conversation is deleted
     if (id === activeConversationId) {
       setOpenSources({});
@@ -141,7 +177,12 @@ export default function Chat({ conversationId }: ChatProps) {
   };
 
   const handleNewChat = () => {
-    createNewChat(setConversations, setActiveConversationId, setMessages, router);
+    createNewChat(
+      setConversations,
+      setActiveConversationId,
+      setMessages,
+      router
+    );
     // Reset source dropdown state on new chat
     setOpenSources({});
   };
@@ -154,7 +195,13 @@ export default function Chat({ conversationId }: ChatProps) {
 
     // If no active conversation, create one first
     if (!currentConversationId) {
-      const newConv = createNewChat(setConversations, setActiveConversationId, setMessages, router, true); // Pass true to return the new conv
+      const newConv = createNewChat(
+        setConversations,
+        setActiveConversationId,
+        setMessages,
+        router,
+        true
+      ); // Pass true to return the new conv
       if (!newConv) {
         console.error("Failed to create new chat for sending message");
         setIsLoading(false);
@@ -167,7 +214,10 @@ export default function Chat({ conversationId }: ChatProps) {
 
     const userMessage: Message = { role: "user", content: messageContent };
     // Ensure messages state is updated immediately for UI responsiveness
-    const updatedMessagesForUI: MessageWithSources[] = [...currentMessages, userMessage];
+    const updatedMessagesForUI: MessageWithSources[] = [
+      ...currentMessages,
+      userMessage,
+    ];
     setMessages(updatedMessagesForUI);
 
     // If it was a new chat, update the conversation immediately with the user message
@@ -230,7 +280,7 @@ export default function Chat({ conversationId }: ChatProps) {
         if (!response.ok || !response.body) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
-            `Chat API error! status: ${response.status}, message: ${errorData.message || "Response body missing"}`,
+            `Chat API error! status: ${response.status}, message: ${errorData.message || "Response body missing"}`
           );
         }
 
@@ -298,7 +348,11 @@ export default function Chat({ conversationId }: ChatProps) {
         if (!accumulatedContent.includes("[Error:")) {
           const finalMessagesComplete: MessageWithSources[] = [
             ...messagesToSend, // History + User Message
-            { role: "assistant" as const, content: accumulatedContent, sources: undefined }, // Add final assistant message
+            {
+              role: "assistant" as const,
+              content: accumulatedContent,
+              sources: undefined,
+            }, // Add final assistant message
           ];
           setMessages(finalMessagesComplete); // Update UI with final complete message
           handleUpdateConversation(finalMessagesComplete); // Save the conversation
@@ -307,7 +361,11 @@ export default function Chat({ conversationId }: ChatProps) {
           // with the error message included.
           const finalMessagesWithError: MessageWithSources[] = [
             ...messagesToSend,
-            { role: "assistant", content: accumulatedContent, sources: undefined },
+            {
+              role: "assistant",
+              content: accumulatedContent,
+              sources: undefined,
+            },
           ];
           // setMessages is already updated within the stream loop for errors
           handleUpdateConversation(finalMessagesWithError);
@@ -316,7 +374,9 @@ export default function Chat({ conversationId }: ChatProps) {
     } catch (error) {
       console.error("Error sending message:", error);
       const errorMessageContent =
-        error instanceof Error ? error.message : "Sorry, there was an error processing your request.";
+        error instanceof Error
+          ? error.message
+          : "Sorry, there was an error processing your request.";
       const errorMessages: MessageWithSources[] = [
         // Use messagesToSend which includes the user message
         ...messagesToSend,
@@ -394,7 +454,10 @@ export default function Chat({ conversationId }: ChatProps) {
         {/* Message List */}
         <div className="flex-1 overflow-y-auto mb-4 space-y-4 pr-2">
           {messages.map((message, index) => (
-            <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div
+              key={index}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+            >
               <div
                 className={`p-3 rounded-lg shadow-sm ${
                   message.role === "user"
@@ -406,7 +469,10 @@ export default function Chat({ conversationId }: ChatProps) {
                   <div>
                     {" "}
                     {/* Wrap assistant content */}
-                    <ChatStyle content={message.content || ""} selectedThemeName={selectedThemeName} />
+                    <ChatStyle
+                      content={message.content || ""}
+                      selectedThemeName={selectedThemeName}
+                    />
                     {/* --- Sources Dropdown --- */}
                     {hasSources(message) && (
                       <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
@@ -424,8 +490,13 @@ export default function Chat({ conversationId }: ChatProps) {
                         {openSources[index] && (
                           <ul className="mt-2 space-y-2 text-xs">
                             {message.sources?.map((source, sourceIndex) => (
-                              <li key={sourceIndex} className="flex items-start group">
-                                <span className="mr-2 text-gray-500 dark:text-gray-400">{sourceIndex + 1}.</span>
+                              <li
+                                key={sourceIndex}
+                                className="flex items-start group"
+                              >
+                                <span className="mr-2 text-gray-500 dark:text-gray-400">
+                                  {sourceIndex + 1}.
+                                </span>
                                 <div className="flex-1">
                                   <a
                                     href={source.metadata?.url}
@@ -434,7 +505,9 @@ export default function Chat({ conversationId }: ChatProps) {
                                     className="text-blue-600 dark:text-blue-400 hover:underline font-medium break-all" // Use break-all for long URLs
                                     title={source.metadata?.url} // Show full URL on hover
                                   >
-                                    {source.metadata?.title || source.metadata?.url || "Source"}
+                                    {source.metadata?.title ||
+                                      source.metadata?.url ||
+                                      "Source"}
                                   </a>
                                   {/* Optionally display pageContent - can be long */}
                                   {/* <p className="mt-1 text-gray-600 dark:text-gray-400 break-words">{source.pageContent}</p> */}
@@ -480,7 +553,12 @@ export default function Chat({ conversationId }: ChatProps) {
 
         {/* Input Area */}
         <div className="mt-auto flex-shrink-0 pb-2">
-          <ChatInput onSubmit={handleSendMessage} isLoading={isLoading} isToggled={isToggled} onToggle={handleToggle} />
+          <ChatInput
+            onSubmit={handleSendMessage}
+            isLoading={isLoading}
+            isToggled={isToggled}
+            onToggle={handleToggle}
+          />
         </div>
       </div>
     </div>
